@@ -89,8 +89,21 @@ const loginUser = async (req, res) => {
         .json({ success: false, message: "Invalid email or password" });
     }
 
-    res.status(200).json({ success: true, message: "Login successful" });
+    generateTokenAndSetCookie(res, user._id);
+
+    user.lastLogin = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: {
+        ...user._doc,
+        password: undefined,
+      },
+    });
   } catch (error) {
+    console.log("Error during login:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -109,16 +122,37 @@ const verifyUser = async (req, res) => {
         success: false,
         message: "Invalid or expired verification code",
       });
-
-      user.isVerified = true;
-      user.verificationToken = undefined;
-      user.verificationTokenExpiresAt = undefined;
-
-      await user.save();
-
-      await sendWelcomeEmail(user.email, code);
     }
-  } catch (error) {}
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
+
+    await user.save();
+
+    await sendWelcomeEmail(user.email, user.name);
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      user: {
+        ...user._doc,
+        password: undefined,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
-module.exports = { registerUser, getAllUsers, loginUser };
+const logoutUser = async (req, res) => {
+  res.clearCookie("token");
+  res.status(200).json({ success: true, message: "Logged out successfully" });
+};
+
+module.exports = {
+  registerUser,
+  getAllUsers,
+  loginUser,
+  verifyUser,
+  logoutUser,
+};

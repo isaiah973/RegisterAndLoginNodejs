@@ -13,7 +13,9 @@ router.post("/register", registerUser);
 
 router.post("/login", loginUser);
 
-// router.post("/verify-email", verifyUser);
+router.post("/verify-email", verifyUser);
+
+router.post("/logout", logoutUser);
 
 // router.post("/logout", logoutUser);
 

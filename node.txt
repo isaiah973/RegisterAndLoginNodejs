@@ -1,0 +1,2 @@
+Restart Node.Js manually:
+mongod --dbpath ~/mongodb-data
