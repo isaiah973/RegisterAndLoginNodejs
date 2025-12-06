@@ -5,13 +5,15 @@ const {
   sendVerificationEmail,
   sendWelcomeEmail,
 } = require("../mailtrap/emails");
+const crypto = require("crypto");
+const { sendPasswordResetEmail } = require("../mailtrap/emails");
 
 //Register user
 const registerUser = async (req, res) => {
   try {
-    const { name, email, age, password } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!name || !email || !age || !password) {
+    if (!name || !email || !password) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required" });
@@ -41,7 +43,7 @@ const registerUser = async (req, res) => {
     //jwt
     generateTokenAndSetCookie(res, user._id);
 
-    await sendVerificationEmail(user.email, verificationToken);
+    // await sendVerificationEmail(user.email, verificationToken);
 
     res.status(201).json({
       success: true,
@@ -51,6 +53,7 @@ const registerUser = async (req, res) => {
         password: undefined,
       },
     });
+    console.log("User registered:", user.email);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -96,6 +99,7 @@ const loginUser = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      token: generateTokenAndSetCookie(res, user._id),
       message: "Login successful",
       user: {
         ...user._doc,
@@ -149,10 +153,48 @@ const logoutUser = async (req, res) => {
   res.status(200).json({ success: true, message: "Logged out successfully" });
 };
 
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User with this email does not exist",
+      });
+    }
+    const resetToken = crypto.randomBytes(20).toString("hex");
+    const resetTokenExpiresAt = Date.now() + 3600000; // 1 hour
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpiresAt = resetTokenExpiresAt;
+    await user.save();
+
+    await sendPasswordResetEmail(
+      user.email,
+      `${process.env.CLIENT_URL}/reset-password/${resetToken}`
+    );
+    res
+      .status(200)
+      .json({ success: true, message: "Password reset email sent" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   getAllUsers,
   loginUser,
   verifyUser,
   logoutUser,
+  forgotPassword,
 };

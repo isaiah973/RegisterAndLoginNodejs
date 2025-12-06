@@ -5,6 +5,7 @@ const {
   getAllUsers,
   verifyUser,
   logoutUser,
+  forgotPassword,
 } = require("../controller/userController");
 
 const router = expressApp.Router();
@@ -16,6 +17,8 @@ router.post("/login", loginUser);
 router.post("/verify-email", verifyUser);
 
 router.post("/logout", logoutUser);
+
+router.post("/forgot-password", forgotPassword);
 
 // router.post("/logout", logoutUser);
 
